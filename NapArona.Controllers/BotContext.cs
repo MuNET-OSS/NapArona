@@ -43,4 +43,9 @@ public class BotContext
     /// 原始消息链（非消息事件为 null）
     /// </summary>
     public List<MessageBase>? Messages { get; internal set; }
+
+    /// <summary>
+    /// 连接级自定义数据，来源于 WebSocket 认证阶段通过 <c>HttpContext.Items</c> 写入的内容。
+    /// </summary>
+    public IDictionary<string, object?> Items { get; internal set; } = new Dictionary<string, object?>();
 }

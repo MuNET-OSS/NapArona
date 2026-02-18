@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NapArona.Controllers.Authorization;
 using NapArona.Hosting.Events;
+using NapArona.Hosting.Sessions;
 using NapPlana.Core.Data.Event;
 using NapPlana.Core.Data.Event.Message;
 using NapPlana.Core.Data.Event.Notice;
@@ -18,6 +19,7 @@ public sealed class BotDispatcher
     private readonly IServiceProvider _serviceProvider;
     private readonly ControllerRouteTable _routeTable;
     private readonly ILogger<BotDispatcher> _logger;
+    private readonly BotSessionManager _sessionManager;
     private readonly object _syncRoot = new();
     private readonly List<Action> _unsubscribeActions = new();
     private readonly IReadOnlyList<CommandRoute> _commandRoutes;
@@ -27,12 +29,14 @@ public sealed class BotDispatcher
         NapAronaEventBus eventBus,
         IServiceProvider serviceProvider,
         ControllerRouteTable routeTable,
-        ILogger<BotDispatcher> logger)
+        ILogger<BotDispatcher> logger,
+        BotSessionManager sessionManager)
     {
         _eventBus = eventBus;
         _serviceProvider = serviceProvider;
         _routeTable = routeTable;
         _logger = logger;
+        _sessionManager = sessionManager;
         _commandRoutes = _routeTable.GetCommandRoutes();
     }
 
@@ -251,7 +255,7 @@ public sealed class BotDispatcher
             var scopedProvider = scope.ServiceProvider;
             var scopedContext = scopedProvider.GetRequiredService<BotContext>();
 
-            FillBotContext(scopedContext, botEvent, text, messages, groupId, userId);
+            FillBotContext(scopedContext, botEvent, text, messages, groupId, userId, _sessionManager);
 
             var controller = ResolveController(scopedProvider, route.ControllerType);
             if (controller is null)
@@ -329,7 +333,8 @@ public sealed class BotDispatcher
                 string.Empty,
                 null,
                 TryReadLong(botEvent.Event, "GroupId"),
-                TryReadLong(botEvent.Event, "UserId") ?? 0);
+                TryReadLong(botEvent.Event, "UserId") ?? 0,
+                _sessionManager);
 
             var controller = ResolveController(scopedProvider, route.ControllerType);
             if (controller is null)
@@ -420,7 +425,8 @@ public sealed class BotDispatcher
         string text,
         List<MessageBase>? messages,
         long? groupId,
-        long userId)
+        long userId,
+        BotSessionManager sessionManager)
         where TEvent : OneBotEvent
     {
         context.SelfId = botEvent.SelfId;
@@ -430,6 +436,10 @@ public sealed class BotDispatcher
         context.UserId = userId;
         context.TextContent = text;
         context.Messages = messages;
+
+        var session = sessionManager.GetSession(botEvent.SelfId);
+        if (session is not null)
+            context.Items = session.Items;
     }
 
     private bool TryBindCommandArguments(

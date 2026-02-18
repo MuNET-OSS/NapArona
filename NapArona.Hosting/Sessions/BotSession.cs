@@ -42,6 +42,12 @@ public class BotSession : IAsyncDisposable
     public string ConnectionId { get; } = Guid.NewGuid().ToString();
 
     /// <summary>
+    /// 连接级自定义数据，可在 <see cref="NapAronaOptions.AuthenticateAsync"/> 中通过
+    /// <c>HttpContext.Items</c> 写入，框架会在认证通过后自动复制到此字典。
+    /// </summary>
+    public IDictionary<string, object?> Items { get; } = new Dictionary<string, object?>();
+
+    /// <summary>
     /// 机器人QQ号，在收到lifecycle事件后设置
     /// </summary>
     public long? SelfId { get; set; }

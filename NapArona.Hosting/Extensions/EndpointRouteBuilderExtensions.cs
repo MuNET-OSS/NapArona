@@ -61,6 +61,14 @@ public static class EndpointRouteBuilderExtensions
             var sessionManager = context.RequestServices.GetRequiredService<BotSessionManager>();
             var session = sessionManager.CreateSession(webSocket);
 
+            // 6. 将 HttpContext.Items 中的字符串键项复制到 session，
+            //    供后续 Controller 通过 BotContext.Items 访问
+            foreach (var item in context.Items)
+            {
+                if (item.Key is string key)
+                    session.Items[key] = item.Value;
+            }
+
             // 6. 运行消息接收循环（阻塞直到连接断开）
             // 循环内部会处理身份识别、事件订阅和会话清理
             await WebSocketMessageLoop.RunReceiveLoopAsync(

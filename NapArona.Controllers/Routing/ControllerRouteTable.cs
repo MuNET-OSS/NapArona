@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using NapArona.Controllers.Attributes;
+using NapArona.Controllers.Filters;
 
 namespace NapArona.Controllers.Routing;
 
@@ -14,14 +15,18 @@ public sealed record CommandRoute(
     bool GroupOnly,
     bool PrivateOnly,
     ParameterInfo[] Parameters,
-    IReadOnlyList<string[]> AuthorizeRoles);
+    IReadOnlyList<string[]> AuthorizeRoles,
+    IReadOnlyList<FilterDescriptor> ControllerFilters,
+    IReadOnlyList<FilterDescriptor> MethodFilters);
 
 public sealed record EventRoute(
     Type ControllerType,
     MethodInfo Method,
     Type EventType,
     ParameterInfo[] Parameters,
-    IReadOnlyList<string[]> AuthorizeRoles);
+    IReadOnlyList<string[]> AuthorizeRoles,
+    IReadOnlyList<FilterDescriptor> ControllerFilters,
+    IReadOnlyList<FilterDescriptor> MethodFilters);
 
 public sealed class ControllerRouteTable
 {
@@ -80,6 +85,8 @@ public sealed class ControllerRouteTable
                             : null;
 
                         var authorizeRoles = CollectAuthorizeRoles(controllerType, method);
+                        var controllerFilters = CollectFilters(controllerType);
+                        var methodFilters = CollectMethodFilters(method);
 
                         commandRoutes.Add(new CommandRoute(
                             controllerType,
@@ -90,7 +97,9 @@ public sealed class ControllerRouteTable
                             classGroupOnly || methodGroupOnly,
                             classPrivateOnly || methodPrivateOnly,
                             method.GetParameters(),
-                            authorizeRoles));
+                            authorizeRoles,
+                            controllerFilters,
+                            methodFilters));
 
                         continue;
                     }
@@ -103,7 +112,9 @@ public sealed class ControllerRouteTable
                         method,
                         onEventAttribute.EventType,
                         method.GetParameters(),
-                        CollectAuthorizeRoles(controllerType, method));
+                        CollectAuthorizeRoles(controllerType, method),
+                        CollectFilters(controllerType),
+                        CollectMethodFilters(method));
 
                     if (!eventRoutes.TryGetValue(route.EventType, out var routesForEvent))
                     {
@@ -137,6 +148,14 @@ public sealed class ControllerRouteTable
             : Array.Empty<EventRoute>();
     }
 
+    /// <summary>
+    /// 获取所有事件路由（用于 DI 注册等场景）。
+    /// </summary>
+    public IEnumerable<EventRoute> GetAllEventRoutes()
+    {
+        return _eventRoutes.Values.SelectMany(r => r);
+    }
+
     internal static IEnumerable<Type> GetControllerTypes(Assembly[] assemblies)
     {
         return assemblies
@@ -166,5 +185,31 @@ public sealed class ControllerRouteTable
         }
 
         return result.AsReadOnly();
+    }
+
+    /// <summary>
+    /// 收集类上的 [BotFilter] 特性，转换为 FilterDescriptor 列表。
+    /// </summary>
+    private static IReadOnlyList<FilterDescriptor> CollectFilters(Type controllerType)
+    {
+        return controllerType
+            .GetCustomAttributes<BotFilterAttribute>(inherit: true)
+            .Select(attr => new FilterDescriptor(attr.FilterType, attr.Order))
+            .OrderBy(d => d.Order)
+            .ToList()
+            .AsReadOnly();
+    }
+
+    /// <summary>
+    /// 收集方法上的 [BotFilter] 特性，转换为 FilterDescriptor 列表。
+    /// </summary>
+    private static IReadOnlyList<FilterDescriptor> CollectMethodFilters(MethodInfo method)
+    {
+        return method
+            .GetCustomAttributes<BotFilterAttribute>(inherit: true)
+            .Select(attr => new FilterDescriptor(attr.FilterType, attr.Order))
+            .OrderBy(d => d.Order)
+            .ToList()
+            .AsReadOnly();
     }
 }

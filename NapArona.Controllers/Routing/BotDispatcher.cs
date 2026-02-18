@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NapArona.Controllers.Authorization;
+using NapArona.Controllers.Filters;
 using NapArona.Hosting.Events;
 using NapArona.Hosting.Sessions;
 using NapPlana.Core.Data.Event;
@@ -20,6 +21,7 @@ public sealed class BotDispatcher
     private readonly ControllerRouteTable _routeTable;
     private readonly ILogger<BotDispatcher> _logger;
     private readonly BotSessionManager _sessionManager;
+    private readonly IReadOnlyList<FilterDescriptor> _globalFilters;
     private readonly object _syncRoot = new();
     private readonly List<Action> _unsubscribeActions = new();
     private readonly IReadOnlyList<CommandRoute> _commandRoutes;
@@ -30,13 +32,15 @@ public sealed class BotDispatcher
         IServiceProvider serviceProvider,
         ControllerRouteTable routeTable,
         ILogger<BotDispatcher> logger,
-        BotSessionManager sessionManager)
+        BotSessionManager sessionManager,
+        NapAronaControllerOptions options)
     {
         _eventBus = eventBus;
         _serviceProvider = serviceProvider;
         _routeTable = routeTable;
         _logger = logger;
         _sessionManager = sessionManager;
+        _globalFilters = options.Filters.OrderBy(d => d.Order).ToList().AsReadOnly();
         _commandRoutes = _routeTable.GetCommandRoutes();
     }
 
@@ -265,6 +269,25 @@ public sealed class BotDispatcher
 
             controller.Context = scopedContext;
 
+            // Filter 管道：Global → Controller → Method
+            var filterContext = new BotFilterContext
+            {
+                BotContext = scopedContext,
+                ControllerType = route.ControllerType,
+                Method = route.Method
+            };
+
+            if (!await RunFiltersAsync(
+                    _globalFilters, route.ControllerFilters, route.MethodFilters,
+                    filterContext, scopedProvider).ConfigureAwait(false))
+            {
+                _logger.LogDebug(
+                    "Filter rejected command route {Controller}.{Method}.",
+                    route.ControllerType.FullName,
+                    route.Method.Name);
+                return;
+            }
+
             // 授权检查
             if (route.AuthorizeRoles.Count > 0)
             {
@@ -343,6 +366,25 @@ public sealed class BotDispatcher
             }
 
             controller.Context = scopedContext;
+
+            // Filter 管道：Global → Controller → Method
+            var filterContext = new BotFilterContext
+            {
+                BotContext = scopedContext,
+                ControllerType = route.ControllerType,
+                Method = route.Method
+            };
+
+            if (!await RunFiltersAsync(
+                    _globalFilters, route.ControllerFilters, route.MethodFilters,
+                    filterContext, scopedProvider).ConfigureAwait(false))
+            {
+                _logger.LogDebug(
+                    "Filter rejected event route {Controller}.{Method}.",
+                    route.ControllerType.FullName,
+                    route.Method.Name);
+                return;
+            }
 
             // 授权检查
             if (route.AuthorizeRoles.Count > 0)
@@ -674,6 +716,61 @@ public sealed class BotDispatcher
             "Resolved controller type {ControllerType} does not inherit BotController.",
             controllerType.FullName);
         return null;
+    }
+
+    /// <summary>
+    /// 按 Global → Controller → Method 顺序执行 Filter 管道。
+    /// 同级内按 Order 排序，任何一个返回 false 即短路。
+    /// </summary>
+    private async Task<bool> RunFiltersAsync(
+        IReadOnlyList<FilterDescriptor> globalFilters,
+        IReadOnlyList<FilterDescriptor> controllerFilters,
+        IReadOnlyList<FilterDescriptor> methodFilters,
+        BotFilterContext context,
+        IServiceProvider scopedProvider)
+    {
+        // Global filters（已在构造时按 Order 排序并冻结）
+        foreach (var descriptor in globalFilters)
+        {
+            if (!await ExecuteFilterAsync(descriptor, context, scopedProvider).ConfigureAwait(false))
+                return false;
+        }
+
+        // Controller filters（已在 ControllerRouteTable 中按 Order 排序）
+        foreach (var descriptor in controllerFilters)
+        {
+            if (!await ExecuteFilterAsync(descriptor, context, scopedProvider).ConfigureAwait(false))
+                return false;
+        }
+
+        // Method filters（已在 ControllerRouteTable 中按 Order 排序）
+        foreach (var descriptor in methodFilters)
+        {
+            if (!await ExecuteFilterAsync(descriptor, context, scopedProvider).ConfigureAwait(false))
+                return false;
+        }
+
+        return true;
+    }
+
+    private async Task<bool> ExecuteFilterAsync(
+        FilterDescriptor descriptor,
+        BotFilterContext context,
+        IServiceProvider scopedProvider)
+    {
+        try
+        {
+            var filter = (IBotFilter)scopedProvider.GetRequiredService(descriptor.FilterType);
+            return await filter.OnExecutingAsync(context).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Filter {FilterType} threw an exception, treating as rejected.",
+                descriptor.FilterType.FullName);
+            return false;
+        }
     }
 
     private void RegisterNoticeSubscription<TEvent>(

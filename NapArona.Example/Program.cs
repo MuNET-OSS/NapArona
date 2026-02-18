@@ -1,8 +1,10 @@
 using NapArona.Controllers.Authorization;
 using NapArona.Controllers.Extensions;
+using NapArona.Controllers.Filters;
 using NapArona.Hosting.Extensions;
 using NapArona.Hosting.Events;
 using NapArona.Example;
+using NapArona.Example.Filters;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseUrls("http://0.0.0.0:5000");
@@ -18,8 +20,15 @@ builder.Services.AddNapArona(opts =>
     };
 });
 
-// 注册 NapArona Controllers 服务
-builder.Services.AddNapAronaControllers();
+// CooldownFilter 需要共享状态，注册为 Singleton（在 AddNapAronaControllers 之前，避免重复注册）
+builder.Services.AddSingleton<CooldownFilter>();
+
+// 注册 NapArona Controllers 服务，配置全局 Filter
+builder.Services.AddNapAronaControllers(opts =>
+{
+    // 全局日志 Filter —— 记录所有命令/事件的触发
+    opts.Filters.Add<CommandLoggingFilter>();
+});
 
 // 注册自定义授权提供者
 builder.Services.AddSingleton<IAuthorizationProvider, ExampleAuthorizationProvider>();

@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Description>ASP.NET Core hosting layer for NapArona — WebSocket endpoint, session management, and event bus for OneBot bots powered by NapPlana.NET.</Description>
+    <PackageTags>onebot;qq;bot;napcat;aspnetcore;websocket</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NapPlana.NET" Version="0.2.7.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+</Project>

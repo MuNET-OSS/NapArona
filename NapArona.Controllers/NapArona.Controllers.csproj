@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>NapArona.Controllers</RootNamespace>
+    <Description>Controller framework for NapArona — attribute-based command routing, parameter binding, authorization, and event handling for OneBot bots.</Description>
+    <PackageTags>onebot;qq;bot;napcat;controller;command-routing</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NapArona.Hosting\NapArona.Hosting.csproj" />
+  </ItemGroup>
+
+</Project>

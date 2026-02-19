@@ -3,7 +3,7 @@ namespace NapArona.Controllers.Attributes;
 /// <summary>
 /// 标记方法为命令处理器，用于匹配用户输入的命令。
 /// </summary>
-[AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
+[AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
 public sealed class CommandAttribute : Attribute
 {
     /// <summary>

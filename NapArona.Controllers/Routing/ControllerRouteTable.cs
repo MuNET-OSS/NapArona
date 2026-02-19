@@ -66,40 +66,42 @@ public sealed class ControllerRouteTable
 
                 foreach (var method in methods)
                 {
-                    var commandAttribute = method.GetCustomAttribute<CommandAttribute>(inherit: true);
+                    var commandAttributes = method.GetCustomAttributes<CommandAttribute>(inherit: true).ToList();
                     var onEventAttribute = method.GetCustomAttribute<OnEventAttribute>(inherit: true);
 
-                    if (commandAttribute is not null && onEventAttribute is not null)
+                    if (commandAttributes.Count > 0 && onEventAttribute is not null)
                     {
                         throw new InvalidOperationException(
                             $"Method '{controllerType.FullName}.{method.Name}' cannot have both [Command] and [OnEvent].");
                     }
 
-                    if (commandAttribute is not null)
+                    if (commandAttributes.Count > 0)
                     {
                         var methodGroupOnly = method.IsDefined(typeof(GroupOnlyAttribute), inherit: true);
                         var methodPrivateOnly = method.IsDefined(typeof(PrivateOnlyAttribute), inherit: true);
-
-                        Regex? compiledRegex = commandAttribute.IsRegex
-                            ? new Regex(commandAttribute.Pattern, RegexOptions.Compiled)
-                            : null;
-
                         var authorizeRoles = CollectAuthorizeRoles(controllerType, method);
                         var controllerFilters = CollectFilters(controllerType);
                         var methodFilters = CollectMethodFilters(method);
 
-                        commandRoutes.Add(new CommandRoute(
-                            controllerType,
-                            method,
-                            commandAttribute.Pattern,
-                            commandAttribute.IsRegex,
-                            compiledRegex,
-                            classGroupOnly || methodGroupOnly,
-                            classPrivateOnly || methodPrivateOnly,
-                            method.GetParameters(),
-                            authorizeRoles,
-                            controllerFilters,
-                            methodFilters));
+                        foreach (var commandAttribute in commandAttributes)
+                        {
+                            Regex? compiledRegex = commandAttribute.IsRegex
+                                ? new Regex(commandAttribute.Pattern, RegexOptions.Compiled)
+                                : null;
+
+                            commandRoutes.Add(new CommandRoute(
+                                controllerType,
+                                method,
+                                commandAttribute.Pattern,
+                                commandAttribute.IsRegex,
+                                compiledRegex,
+                                classGroupOnly || methodGroupOnly,
+                                classPrivateOnly || methodPrivateOnly,
+                                method.GetParameters(),
+                                authorizeRoles,
+                                controllerFilters,
+                                methodFilters));
+                        }
 
                         continue;
                     }

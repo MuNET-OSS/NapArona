@@ -544,6 +544,12 @@ public sealed class BotDispatcher
                     continue;
                 }
 
+                if (IsNullableParameter(parameter))
+                {
+                    args[i] = null;
+                    continue;
+                }
+
                 return false;
             }
 
@@ -588,6 +594,12 @@ public sealed class BotDispatcher
                 if (parameter.HasDefaultValue)
                 {
                     args[i] = parameter.DefaultValue;
+                    continue;
+                }
+
+                if (IsNullableParameter(parameter))
+                {
+                    args[i] = null;
                     continue;
                 }
 
@@ -701,6 +713,30 @@ public sealed class BotDispatcher
         }
 
         value = null;
+        return false;
+    }
+
+    private static bool IsNullableParameter(ParameterInfo parameter)
+    {
+        // Nullable<T> (int?, long?, etc.)
+        if (Nullable.GetUnderlyingType(parameter.ParameterType) is not null)
+            return true;
+
+        // Nullable reference type (string?, etc.)
+        if (!parameter.ParameterType.IsValueType)
+        {
+            var nullableAttr = parameter.GetCustomAttribute<System.Runtime.CompilerServices.NullableAttribute>();
+            if (nullableAttr is { NullableFlags.Length: > 0 })
+                return nullableAttr.NullableFlags[0] == 2;
+
+            // Check NullableContextAttribute on method/class for default context
+            var contextAttr =
+                parameter.Member.GetCustomAttribute<System.Runtime.CompilerServices.NullableContextAttribute>()
+                ?? parameter.Member.DeclaringType?.GetCustomAttribute<System.Runtime.CompilerServices.NullableContextAttribute>();
+            if (contextAttr is not null)
+                return contextAttr.Flag == 2;
+        }
+
         return false;
     }
 

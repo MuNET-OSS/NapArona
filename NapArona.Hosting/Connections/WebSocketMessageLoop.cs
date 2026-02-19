@@ -40,12 +40,18 @@ public static class WebSocketMessageLoop
     {
         var ws = session.Connection.WebSocket;
         var buffer = ArrayPool<byte>.Shared.Rent(BufferSize);
+        var removed = false;
+
+        // 将外部取消令牌与会话自身的 Cts 关联，
+        // 使得 DisposeAsync 取消 session.Cts 时也能中断接收循环
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, session.Cts.Token);
+        var linkedToken = linkedCts.Token;
 
         try
         {
             using var messageBuffer = new MemoryStream();
 
-            while (!ct.IsCancellationRequested && ws.State == WebSocketState.Open)
+            while (!linkedToken.IsCancellationRequested && ws.State == WebSocketState.Open)
             {
                 WebSocketReceiveResult result;
                 messageBuffer.SetLength(0);
@@ -55,12 +61,13 @@ public static class WebSocketMessageLoop
                 {
                     result = await ws.ReceiveAsync(
                         new ArraySegment<byte>(buffer),
-                        ct);
+                        linkedToken);
 
                     if (result.MessageType == WebSocketMessageType.Close)
                     {
                         // 收到关闭帧，移除会话并退出
                         await sessionManager.RemoveSessionAsync(session);
+                        removed = true;
                         return;
                     }
 
@@ -82,8 +89,8 @@ public static class WebSocketMessageLoop
                 catch (Exception ex)
                 {
                     session.EventHandler.LogReceived(
-                        LogLevel.Debug,
-                        $"处理消息时出现异常: {ex.Message}");
+                        LogLevel.Error,
+                        $"处理消息时出现异常: {ex}");
                 }
             }
         }
@@ -100,7 +107,7 @@ public static class WebSocketMessageLoop
             ArrayPool<byte>.Shared.Return(buffer);
 
             // 确保会话被清理（若尚未移除）
-            if (ws.State != WebSocketState.Open)
+            if (!removed && ws.State != WebSocketState.Open)
             {
                 await sessionManager.RemoveSessionAsync(session);
             }

@@ -33,6 +33,16 @@ public class ReverseWebSocketConnection : ConnectionBase
     }
 
     /// <summary>
+    /// 发送超时时间（秒）
+    /// </summary>
+    private const int SendTimeoutSeconds = 10;
+
+    /// <summary>
+    /// 关闭超时时间（秒）
+    /// </summary>
+    private const int CloseTimeoutSeconds = 5;
+
+    /// <summary>
     /// 发送原始消息字符串
     /// </summary>
     /// <param name="message">消息JSON字符串</param>
@@ -43,12 +53,13 @@ public class ReverseWebSocketConnection : ConnectionBase
             return;
         }
 
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(SendTimeoutSeconds));
         var bytes = Encoding.UTF8.GetBytes(message);
         await _webSocket.SendAsync(
             new ArraySegment<byte>(bytes),
             WebSocketMessageType.Text,
             endOfMessage: true,
-            CancellationToken.None);
+            cts.Token);
     }
 
     /// <summary>
@@ -87,10 +98,11 @@ public class ReverseWebSocketConnection : ConnectionBase
     {
         if (_webSocket.State is WebSocketState.Open or WebSocketState.CloseReceived)
         {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(CloseTimeoutSeconds));
             await _webSocket.CloseAsync(
                 WebSocketCloseStatus.NormalClosure,
                 "Shutdown",
-                CancellationToken.None);
+                cts.Token);
         }
     }
 }

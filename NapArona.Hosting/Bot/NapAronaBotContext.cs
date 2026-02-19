@@ -72,7 +72,7 @@ public class NapAronaBotContext : INapBot, IDisposable
         }
 
         // 超时处理
-        cts.Token.Register(() =>
+        var registration = cts.Token.Register(() =>
         {
             if (_apiHandler.TryRemove(echo, out var pending))
             {
@@ -94,6 +94,7 @@ public class NapAronaBotContext : INapBot, IDisposable
         }
         finally
         {
+            registration.Dispose();
             cts.Dispose();
         }
     }

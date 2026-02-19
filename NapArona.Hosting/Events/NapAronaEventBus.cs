@@ -291,8 +291,12 @@ public class NapAronaEventBus
 
         var selfId = session.SelfId!.Value;
 
-        if (_subscriptions.ContainsKey(selfId))
-            throw new InvalidOperationException($"Session {selfId} is already subscribed.");
+        // 若存在旧订阅（理论上不应发生，IdentifySessionAsync 会先 Unsubscribe），
+        // 先执行旧清理委托再替换，避免事件处理器泄漏。
+        if (_subscriptions.TryRemove(selfId, out var oldCleanup))
+        {
+            oldCleanup();
+        }
 
         var handler = session.EventHandler;
         var ctx = session.Context;

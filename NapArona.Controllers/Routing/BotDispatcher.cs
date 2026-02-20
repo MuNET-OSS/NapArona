@@ -7,6 +7,7 @@ using NapArona.Controllers.Authorization;
 using NapArona.Controllers.Filters;
 using NapArona.Hosting.Events;
 using NapArona.Hosting.Sessions;
+using NapPlana.Core.Data;
 using NapPlana.Core.Data.Event;
 using NapPlana.Core.Data.Event.Message;
 using NapPlana.Core.Data.Event.Notice;
@@ -170,6 +171,14 @@ public sealed class BotDispatcher
 
     private void HandleGroupMessage(BotEvent<GroupMessageEvent> botEvent)
     {
+        // 如果消息以 @某人 开头且不是 @自己，则忽略
+        if (botEvent.Event.Messages is { Count: > 0 }
+            && botEvent.Event.Messages[0] is { MessageType: MessageDataType.At, MessageData: AtMessageData atData }
+            && atData.Qq != botEvent.SelfId.ToString())
+        {
+            return;
+        }
+
         var text = MessageTextExtractor.ExtractText(botEvent.Event.Messages);
 
         foreach (var route in _commandRoutes)

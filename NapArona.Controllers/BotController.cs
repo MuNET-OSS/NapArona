@@ -22,7 +22,8 @@ public abstract class BotController
     /// 回复文本消息
     /// </summary>
     /// <param name="text">要发送的文本内容</param>
-    protected async Task ReplyTextAsync(string text)
+    /// <param name="reply">是否引用源消息，默认为 true</param>
+    protected async Task ReplyTextAsync(string text, bool reply = true)
     {
         if (Context?.Bot is null)
             throw new InvalidOperationException("BotContext is not initialized.");
@@ -30,17 +31,26 @@ public abstract class BotController
         var message = new TextMessage { MessageData = new TextMessageData { Text = text } };
         var messages = new List<MessageBase> { message };
 
-        await ReplyAsync(messages);
+        await ReplyAsync(messages, reply);
     }
 
     /// <summary>
     /// 回复消息链
     /// </summary>
     /// <param name="messages">要发送的消息链</param>
-    protected async Task ReplyAsync(List<MessageBase> messages)
+    /// <param name="reply">是否引用源消息，默认为 true</param>
+    protected async Task ReplyAsync(List<MessageBase> messages, bool reply = true)
     {
         if (Context?.Bot is null)
             throw new InvalidOperationException("BotContext is not initialized.");
+
+        if (reply && Context.MessageId.HasValue)
+        {
+            messages.Insert(0, new ReplyMessage
+            {
+                MessageData = new ReplyMessageData { Id = Context.MessageId.Value.ToString() }
+            });
+        }
 
         if (Context.GroupId.HasValue)
         {

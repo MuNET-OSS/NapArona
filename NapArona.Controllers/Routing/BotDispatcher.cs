@@ -487,6 +487,7 @@ public sealed class BotDispatcher
         context.UserId = userId;
         context.TextContent = text;
         context.Messages = messages;
+        context.MessageId = botEvent.Event is MessageEventBase msgEvent ? msgEvent.MessageId : null;
 
         var session = sessionManager.GetSession(botEvent.SelfId);
         if (session is not null)

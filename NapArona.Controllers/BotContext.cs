@@ -40,6 +40,11 @@ public class BotContext
     public string TextContent { get; internal set; } = string.Empty;
 
     /// <summary>
+    /// 原始消息 ID（非消息事件为 null）
+    /// </summary>
+    public long? MessageId { get; internal set; }
+
+    /// <summary>
     /// 原始消息链（非消息事件为 null）
     /// </summary>
     public List<MessageBase>? Messages { get; internal set; }

@@ -142,6 +142,30 @@ public class NapAronaBotContext : INapBot, IDisposable
     }
 
     /// <summary>
+    /// 发送群合并转发消息
+    /// </summary>
+    public async Task<ForwardMessageSendResponseData> SendGroupForwardMessageAsync(GroupForwardMessageSend message, int timeoutSeconds = 15)
+    {
+        if (message is null)
+            throw new ArgumentNullException(nameof(message));
+
+        var res = await SendMessageAsync<ForwardMessageSendResponseData>(message, ApiActionType.SendGroupForwardMsg, timeoutSeconds);
+        return res ?? throw new InvalidOperationException("Failed to send group forward message: response was null.");
+    }
+
+    /// <summary>
+    /// 发送私聊合并转发消息
+    /// </summary>
+    public async Task<ForwardMessageSendResponseData> SendPrivateForwardMessageAsync(PrivateForwardMessageSend message, int timeoutSeconds = 15)
+    {
+        if (message is null)
+            throw new ArgumentNullException(nameof(message));
+
+        var res = await SendMessageAsync<ForwardMessageSendResponseData>(message, ApiActionType.SendPrivateForwardMsg, timeoutSeconds);
+        return res ?? throw new InvalidOperationException("Failed to send private forward message: response was null.");
+    }
+
+    /// <summary>
     /// 撤回群消息
     /// </summary>
     /// <param name="deleteGroupMessage">撤回消息结构</param>

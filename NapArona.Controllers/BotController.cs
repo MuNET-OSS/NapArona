@@ -1,3 +1,4 @@
+using NapPlana.Core.Bot;
 using NapPlana.Core.Data.API;
 using NapPlana.Core.Data.Message;
 
@@ -60,6 +61,43 @@ public abstract class BotController
                 Message = messages
             };
             await Context.Bot.SendPrivateMessageAsync(privateMessage);
+        }
+    }
+
+    /// <summary>
+    /// 回复合并转发消息
+    /// </summary>
+    /// <param name="builder">合并转发消息构建器（外显信息通过 SetSource/SetSummary/SetPrompt/SetNews 设置）</param>
+    protected async Task ReplyForwardAsync(ForwardMessageBuilder builder)
+    {
+        if (Context?.Bot is null)
+            throw new InvalidOperationException("BotContext is not initialized.");
+
+        var messages = builder.Build();
+
+        if (Context.GroupId.HasValue)
+        {
+            await Context.Bot.SendGroupForwardMessageAsync(new GroupForwardMessageSend
+            {
+                GroupId = Context.GroupId.Value.ToString(),
+                Messages = messages,
+                Source = builder.Source,
+                Summary = builder.Summary,
+                Prompt = builder.Prompt,
+                News = builder.News
+            });
+        }
+        else
+        {
+            await Context.Bot.SendPrivateForwardMessageAsync(new PrivateForwardMessageSend
+            {
+                UserId = Context.UserId.ToString(),
+                Messages = messages,
+                Source = builder.Source,
+                Summary = builder.Summary,
+                Prompt = builder.Prompt,
+                News = builder.News
+            });
         }
     }
 }

@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using NapArona.Controllers.Attributes;
 using NapArona.Controllers.Authorization;
 using NapArona.Controllers.Filters;
 using NapArona.Hosting.Events;
@@ -537,6 +538,23 @@ public sealed class BotDispatcher
                 continue;
             }
 
+            // [RawText]: 将剩余原始文本整体绑定到该 string 参数
+            if (parameter.ParameterType == typeof(string) &&
+                parameter.IsDefined(typeof(RawTextAttribute), false))
+            {
+                var remaining = result.RawArgs;
+                for (var skip = 0; skip < argIndex; skip++)
+                {
+                    remaining = remaining.TrimStart();
+                    var spaceIdx = remaining.IndexOf(' ');
+                    remaining = spaceIdx < 0 ? string.Empty : remaining[spaceIdx..];
+                }
+
+                args[i] = remaining.TrimStart();
+                argIndex = sourceArgs.Length; // 标记所有参数已消费
+                continue;
+            }
+
             if (parameter.ParameterType == typeof(string[]) &&
                 (i == parameters.Length - 1 || parameter.IsDefined(typeof(ParamArrayAttribute), false)))
             {
@@ -572,7 +590,8 @@ public sealed class BotDispatcher
             argIndex++;
         }
 
-        return argIndex == sourceArgs.Length;
+        // 多余的参数静默丢弃
+        return true;
     }
 
     private static bool TryBindRegexArguments(

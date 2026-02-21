@@ -22,10 +22,19 @@ public static class CommandParser
             return null;
         }
 
+        // 计算命令名之后的原始文本
+        var rawArgs = string.Empty;
+        var commandEnd = text.IndexOf(parts[0], StringComparison.Ordinal) + parts[0].Length;
+        if (commandEnd < text.Length)
+        {
+            rawArgs = text[commandEnd..].TrimStart();
+        }
+
         return new CommandParseResult
         {
             CommandName = pattern,
-            Args = parts.Length > 1 ? parts[1..] : Array.Empty<string>()
+            Args = parts.Length > 1 ? parts[1..] : Array.Empty<string>(),
+            RawArgs = rawArgs
         };
     }
 
@@ -67,6 +76,11 @@ public sealed class CommandParseResult
     public string CommandName { get; init; } = string.Empty;
 
     public string[] Args { get; init; } = Array.Empty<string>();
+
+    /// <summary>
+    /// 命令名之后的原始文本（未按空格拆分）。
+    /// </summary>
+    public string RawArgs { get; init; } = string.Empty;
 }
 
 public sealed class RegexParseResult

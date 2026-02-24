@@ -202,6 +202,53 @@ public class NapAronaBotContext : INapBot, IDisposable
     }
 
     /// <summary>
+    /// 贴表情
+    /// </summary>
+    public async Task SetMsgEmojiLikeAsync(MsgEmojiLikeSend message)
+    {
+        if (message is null)
+            throw new ArgumentNullException(nameof(message));
+
+        await SendMessageAsync<ResponseDataBase>(message, ApiActionType.SetMsgEmojiLike);
+    }
+
+    /// <summary>
+    /// 获取文件信息
+    /// </summary>
+    public async Task<GetFileResponseData> GetFileAsync(GetFileRequest request, int timeoutSeconds = 15)
+    {
+        if (request is null)
+            throw new ArgumentNullException(nameof(request));
+
+        var res = await SendMessageAsync<GetFileResponseData>(request, ApiActionType.GetFile, timeoutSeconds);
+        return res ?? throw new InvalidOperationException("Failed to get file info: response was null.");
+    }
+
+    /// <summary>
+    /// 获取群文件下载链接
+    /// </summary>
+    public async Task<GetFileUrlResponseData> GetGroupFileUrlAsync(GetGroupFileUrlRequest request, int timeoutSeconds = 15)
+    {
+        if (request is null)
+            throw new ArgumentNullException(nameof(request));
+
+        var res = await SendMessageAsync<GetFileUrlResponseData>(request, ApiActionType.GetGroupFileUrl, timeoutSeconds);
+        return res ?? throw new InvalidOperationException("Failed to get group file url: response was null.");
+    }
+
+    /// <summary>
+    /// 获取私聊文件下载链接
+    /// </summary>
+    public async Task<GetFileUrlResponseData> GetPrivateFileUrlAsync(GetPrivateFileUrlRequest request, int timeoutSeconds = 15)
+    {
+        if (request is null)
+            throw new ArgumentNullException(nameof(request));
+
+        var res = await SendMessageAsync<GetFileUrlResponseData>(request, ApiActionType.GetPrivateFileUrl, timeoutSeconds);
+        return res ?? throw new InvalidOperationException("Failed to get private file url: response was null.");
+    }
+
+    /// <summary>
     /// 释放资源
     /// </summary>
     public void Dispose()

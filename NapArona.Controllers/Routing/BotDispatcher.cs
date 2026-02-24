@@ -12,6 +12,7 @@ using NapPlana.Core.Data;
 using NapPlana.Core.Data.Event;
 using NapPlana.Core.Data.Event.Message;
 using NapPlana.Core.Data.Event.Notice;
+using NapPlana.Core.Data.Event.Request;
 using NapPlana.Core.Data.Message;
 
 namespace NapArona.Controllers.Routing;
@@ -146,6 +147,12 @@ public sealed class BotDispatcher
             RegisterNoticeSubscription<ProfileLikeNoticeEvent>(
                 h => _eventBus.OnProfileLikeNotice += h,
                 h => _eventBus.OnProfileLikeNotice -= h);
+            RegisterNoticeSubscription<FriendRequestEvent>(
+                h => _eventBus.OnFriendRequest += h,
+                h => _eventBus.OnFriendRequest -= h);
+            RegisterNoticeSubscription<GroupRequestEvent>(
+                h => _eventBus.OnGroupRequest += h,
+                h => _eventBus.OnGroupRequest -= h);
 
             _started = true;
         }

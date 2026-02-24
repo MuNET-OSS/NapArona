@@ -176,6 +176,30 @@ public class NapAronaBotContext : INapBot, IDisposable
 
         await SendMessageAsync<ResponseDataBase>(deleteGroupMessage, ApiActionType.DeleteMsg);
     }
+    
+    /// <summary>
+    /// 处理好友添加请求
+    /// </summary>
+    /// <param name="request">请求结构</param>
+    public async Task SetFriendAddRequestAsync(FriendAddRequestAction request)
+    {
+        if (request is null)
+            throw new ArgumentNullException(nameof(request));
+
+        await SendMessageAsync<ResponseDataBase>(request, ApiActionType.SetFriendAddRequest);
+    }
+    
+    /// <summary>
+    /// 处理群添加请求
+    /// </summary>
+    /// <param name="request">请求结构</param>
+    public async Task SetGroupAddRequestAsync(GroupAddRequestAction request)
+    {
+        if (request is null)
+            throw new ArgumentNullException(nameof(request));
+
+        await SendMessageAsync<ResponseDataBase>(request, ApiActionType.SetGroupAddRequest);
+    }
 
     /// <summary>
     /// 释放资源

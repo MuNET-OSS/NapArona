@@ -1,4 +1,5 @@
 using NapPlana.Core.Data.Event.Notice;
+using NapPlana.Core.Data.Event.Request;
 
 namespace NapArona.Controllers.Attributes;
 
@@ -38,6 +39,26 @@ public sealed class OnGroupIncreaseAttribute : OnEventAttribute
 public sealed class OnGroupDecreaseAttribute : OnEventAttribute
 {
     public OnGroupDecreaseAttribute() : base(typeof(GroupDecreaseNoticeEvent))
+    {
+    }
+}
+
+/// <summary>
+/// 监听好友添加请求事件。
+/// </summary>
+public sealed class OnFriendRequestAttribute : OnEventAttribute
+{
+    public OnFriendRequestAttribute() : base(typeof(FriendRequestEvent))
+    {
+    }
+}
+
+/// <summary>
+/// 监听加群请求事件。
+/// </summary>
+public sealed class OnGroupRequestAttribute : OnEventAttribute
+{
+    public OnGroupRequestAttribute() : base(typeof(GroupRequestEvent))
     {
     }
 }

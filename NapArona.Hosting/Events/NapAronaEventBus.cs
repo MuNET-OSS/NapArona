@@ -5,6 +5,7 @@ using NapPlana.Core.Data;
 using NapPlana.Core.Data.Event.Message;
 using NapPlana.Core.Data.Event.Meta;
 using NapPlana.Core.Data.Event.Notice;
+using NapPlana.Core.Data.Event.Request;
 
 namespace NapArona.Hosting.Events;
 
@@ -274,6 +275,19 @@ public class NapAronaEventBus
     public event Action<BotEvent<ProfileLikeNoticeEvent>>? OnProfileLikeNotice;
 
     #endregion
+    #region 请求事件
+
+    /// <summary>
+    /// 好友添加请求事件。
+    /// </summary>
+    public event Action<BotEvent<FriendRequestEvent>>? OnFriendRequest;
+
+    /// <summary>
+    /// 加群请求事件。
+    /// </summary>
+    public event Action<BotEvent<GroupRequestEvent>>? OnGroupRequest;
+
+    #endregion
 
     /// <summary>
     /// 订阅指定机器人会话的所有事件。
@@ -417,6 +431,13 @@ public class NapAronaEventBus
         handler.OnGroupTitleNoticeReceived += onGroupTitle;
         handler.OnProfileLikeNoticeReceived += onProfileLike;
 
+        // 请求事件
+        Action<FriendRequestEvent> onFriendRequest = ev => { var arona = ev.ToArona(); arona.Bot = ctx; OnFriendRequest?.Invoke(Wrap<FriendRequestEvent>(arona)); };
+        Action<GroupRequestEvent> onGroupRequest = ev => { var arona = ev.ToArona(); arona.Bot = ctx; OnGroupRequest?.Invoke(Wrap<GroupRequestEvent>(arona)); };
+
+        handler.OnFriendRequestReceived += onFriendRequest;
+        handler.OnGroupRequestReceived += onGroupRequest;
+
         // 直接触发 BotConnected（因为 SubscribeTo 在 lifecycle 事件解析之后调用，
         // Core 的 OnBotConnected 已经触发过了，此时订阅已来不及捕获）
         BotConnected?.Invoke(selfId, ctx);
@@ -474,6 +495,9 @@ public class NapAronaEventBus
             handler.OnInputStatusNoticeReceived -= onInputStatus;
             handler.OnGroupTitleNoticeReceived -= onGroupTitle;
             handler.OnProfileLikeNoticeReceived -= onProfileLike;
+
+            handler.OnFriendRequestReceived -= onFriendRequest;
+            handler.OnGroupRequestReceived -= onGroupRequest;
         };
     }
 
